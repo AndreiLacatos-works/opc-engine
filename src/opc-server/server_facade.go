@@ -1,9 +1,15 @@
 package opcserver
 
-import "time"
+import (
+	"time"
+
+	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
+)
 
 type OpcServer interface {
 	Setup() error
+	SetNodeStructure(opc.OpcStructure) error
+	SetNodeValues() error
 	Start() error
 	Stop() error
 }

@@ -1,14 +1,17 @@
 package opcnode
 
-import "github.com/AndreiLacatos/opc-engine/node-engine/models/waveform"
+import (
+	"github.com/AndreiLacatos/opc-engine/node-engine/models/waveform"
+	"github.com/google/uuid"
+)
 
 type OpcValueNode struct {
-	Id string
-	Label string
+	Id       uuid.UUID
+	Label    string
 	Waveform waveform.Waveform
 }
 
-func (v *OpcValueNode) GetId() string {
+func (v *OpcValueNode) GetId() uuid.UUID {
 	return v.Id
 }
 

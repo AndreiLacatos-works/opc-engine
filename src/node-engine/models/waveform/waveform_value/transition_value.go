@@ -1,6 +1,6 @@
 package waveformvalue
 
-type Transition struct {}
+type Transition struct{}
 
 func (*Transition) GetValue() float64 {
 	return 0.0

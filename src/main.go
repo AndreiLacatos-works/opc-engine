@@ -29,9 +29,6 @@ func main() {
 		log.Fatalf("error decoding JSON: %v", err)
 	}
 
-	fmt.Printf("%v\n", structure)
-	r := structure.Root.ToDomain()
-	fmt.Printf("%v\n", r)
 	s, err := opcserver.CreateNew(opcserver.OpcServerConfig{
 		ServerName:        "test-server",
 		ServerEndpointUrl: getIpAddress(),
@@ -41,11 +38,15 @@ func main() {
 			BuildDate: time.Now().UTC(),
 		},
 	})
+
 	if err != nil {
-		log.Fatalf("could not create OPC server: %v", err)
+		log.Fatalf("could not create OPC server: %v\n", err)
 	}
 	if err = s.Setup(); err != nil {
-		log.Fatalf("could not set up OPC server: %v", err)
+		log.Fatalf("could not set up OPC server: %v\n", err)
+	}
+	if err = s.SetNodeStructure(structure.ToDomain()); err != nil {
+		log.Printf("some nodes might not have been added correctly: %v\n", err)
 	}
 
 	stop := make(chan interface{})

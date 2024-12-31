@@ -17,6 +17,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
+	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
 	"github.com/awcullen/opcua/server"
 	"github.com/awcullen/opcua/ua"
 	"github.com/pkg/errors"
@@ -103,6 +105,34 @@ func (s *opcServerImpl) Stop() error {
 	}
 	log.Println("stopping OPC server")
 	return s.OpcServer.Close()
+}
+
+func (s *opcServerImpl) SetNodeStructure(o opc.OpcStructure) error {
+	if s.OpcServer == nil {
+		return fmt.Errorf("server never set up")
+	}
+	applicationObjects := ua.NewNodeIDNumeric(0, 85)
+	return addNodesRecursively(o.Root, applicationObjects, s.OpcServer.NamespaceManager(), s.OpcServer)
+}
+
+func (s *opcServerImpl) SetNodeValues() error {
+	return nil
+}
+
+func addNodesRecursively(r opcnode.OpcStructureNode, p ua.NodeID, m *server.NamespaceManager, s *server.Server) error {
+	n, err := makeNode(r, p, s)
+	if err != nil {
+		return err
+	}
+	m.AddNode(n)
+	if t, ok := r.(*opcnode.OpcContainerNode); ok {
+		for _, c := range t.Children {
+			if err := addNodesRecursively(c, ua.NewNodeIDGUID(2, t.GetId()), m, s); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func createServerCertificate(c OpcServerConfig) error {
