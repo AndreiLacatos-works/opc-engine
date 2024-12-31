@@ -3,22 +3,24 @@ package opcserver
 import "time"
 
 type OpcServer interface {
+	Setup() error
 	Start() error
 	Stop() error
 }
 
 type OpcServerBuildInfo struct {
-	Version string
+	Version   string
 	BuildDate time.Time
 }
 
-type OpcServecConfig struct {
-	ServerName string
+type OpcServerConfig struct {
+	ServerName        string
 	ServerEndpointUrl string
-	BuildInfo OpcServerBuildInfo
+	Port              int32
+	BuildInfo         OpcServerBuildInfo
 }
 
-func CreateNew(c OpcServecConfig) (OpcServer, error) {
+func CreateNew(c OpcServerConfig) (OpcServer, error) {
 	s := &opcServerImpl{Config: c}
 	return s, nil
 }

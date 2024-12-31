@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/AndreiLacatos/opc-engine/node-engine/serialization"
@@ -30,23 +32,39 @@ func main() {
 	fmt.Printf("%v\n", structure)
 	r := structure.Root.ToDomain()
 	fmt.Printf("%v\n", r)
-	s, err := opcserver.CreateNew(opcserver.OpcServecConfig{
-		ServerName: "test-server",
+	s, err := opcserver.CreateNew(opcserver.OpcServerConfig{
+		ServerName:        "test-server",
 		ServerEndpointUrl: getIpAddress(),
+		Port:              39056,
 		BuildInfo: opcserver.OpcServerBuildInfo{
-			Version: "0.0.1",
+			Version:   "0.0.1",
 			BuildDate: time.Now().UTC(),
 		},
 	})
 	if err != nil {
 		log.Fatalf("could not create OPC server: %v", err)
 	}
-	if err = s.Start(); err != nil {
-		log.Fatalf("could not start OPC server: %v", err)
+	if err = s.Setup(); err != nil {
+		log.Fatalf("could not set up OPC server: %v", err)
 	}
-	if err = s.Stop(); err != nil {
-		log.Fatalf("could not stop OPC server: %v", err)
-	}
+
+	stop := make(chan interface{})
+	go func() {
+		log.Println("starting server")
+		s.Start()
+		log.Println("server stopped")
+		stop <- ""
+	}()
+
+	go func() {
+		waitTerminationSignal()
+
+		if err = s.Stop(); err != nil {
+			log.Fatalf("could not stop OPC server: %v", err)
+		}
+	}()
+	<-stop
+	log.Printf("program terminated")
 }
 
 func getIpAddress() string {
@@ -94,4 +112,10 @@ func getIpAddress() string {
 	}
 
 	return candidates[0]
+}
+
+func waitTerminationSignal() {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
+	<-sigs
 }
