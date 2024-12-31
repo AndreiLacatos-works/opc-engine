@@ -25,4 +25,6 @@ func main() {
 	}
 
 	fmt.Printf("%v\n", structure)
+	r := structure.Root.ToDomain()
+	fmt.Printf("%v\n", r)
 }
