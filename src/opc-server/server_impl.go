@@ -103,7 +103,7 @@ func (s *opcServerImpl) Stop() error {
 	if s.OpcServer == nil {
 		return fmt.Errorf("server never set up")
 	}
-	log.Println("stopping OPC server")
+	log.Println("stopping opc server")
 	return s.OpcServer.Close()
 }
 
@@ -112,7 +112,8 @@ func (s *opcServerImpl) SetNodeStructure(o opc.OpcStructure) error {
 		return fmt.Errorf("server never set up")
 	}
 	applicationObjects := ua.NewNodeIDNumeric(0, 85)
-	return addNodesRecursively(o.Root, applicationObjects, s.OpcServer.NamespaceManager(), s.OpcServer)
+	r := opcnode.OpcContainerNode(o.Root)
+	return addNodesRecursively(&r, applicationObjects, s.OpcServer.NamespaceManager(), s.OpcServer)
 }
 
 func (s *opcServerImpl) SetNodeValues() error {

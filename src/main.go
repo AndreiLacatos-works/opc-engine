@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	nodeengine "github.com/AndreiLacatos/opc-engine/node-engine"
+	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
 	"github.com/AndreiLacatos/opc-engine/node-engine/serialization"
 	opcserver "github.com/AndreiLacatos/opc-engine/opc-server"
 )
@@ -22,12 +24,16 @@ func main() {
 	}
 	jsonString := string(content)
 
-	var structure serialization.OpcStructureModel
+	var structureModel serialization.OpcStructureModel
 
-	err = json.Unmarshal([]byte(jsonString), &structure)
+	err = json.Unmarshal([]byte(jsonString), &structureModel)
 	if err != nil {
 		log.Fatalf("error decoding JSON: %v", err)
 	}
+	structure := structureModel.ToDomain()
+
+	e := nodeengine.CreateNew(extractValueNodes(structure.Root))
+	e.Start()
 
 	s, err := opcserver.CreateNew(opcserver.OpcServerConfig{
 		ServerName:        "test-server",
@@ -45,20 +51,38 @@ func main() {
 	if err = s.Setup(); err != nil {
 		log.Fatalf("could not set up OPC server: %v\n", err)
 	}
-	if err = s.SetNodeStructure(structure.ToDomain()); err != nil {
+	if err = s.SetNodeStructure(structure); err != nil {
 		log.Printf("some nodes might not have been added correctly: %v\n", err)
 	}
 
 	stop := make(chan interface{})
 	go func() {
-		log.Println("starting server")
+		log.Println("starting opc server")
 		s.Start()
-		log.Println("server stopped")
+		log.Println("opc server stopped")
 		stop <- ""
+	}()
+
+	// dummy consumer
+	go func() {
+		c := e.EventChannel()
+
+		for {
+			p, ok := <-c
+			if ok {
+				log.Printf("value %f from %s\n", p.NewValue.GetValue(), p.Id)
+			} else {
+				log.Println("channel closed")
+				return
+			}
+		}
 	}()
 
 	go func() {
 		waitTerminationSignal()
+
+		e.Stop()
+		time.Sleep(1 * time.Second)
 
 		if err = s.Stop(); err != nil {
 			log.Fatalf("could not stop OPC server: %v", err)
@@ -119,4 +143,18 @@ func waitTerminationSignal() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
 	<-sigs
+}
+
+func extractValueNodes(r opcnode.OpcContainerNode) []opcnode.OpcValueNode {
+	res := make([]opcnode.OpcValueNode, 0)
+
+	for _, n := range r.Children {
+		switch t := n.(type) {
+		case *opcnode.OpcContainerNode:
+			res = append(res, extractValueNodes(*t)...)
+		case *opcnode.OpcValueNode:
+			res = append(res, *t)
+		}
+	}
+	return res
 }

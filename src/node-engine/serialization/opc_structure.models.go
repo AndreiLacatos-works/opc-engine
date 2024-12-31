@@ -22,7 +22,7 @@ type OpcStructureNodeModel struct {
 
 func (m *OpcStructureModel) ToDomain() opc.OpcStructure {
 	return opc.OpcStructure{
-		Root: m.Root.ToDomain(),
+		Root: *m.Root.ToDomain().(*opcnode.OpcContainerNode),
 	}
 }
 
