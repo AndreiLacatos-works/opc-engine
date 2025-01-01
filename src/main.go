@@ -23,6 +23,12 @@ func main() {
 	l = logging.MakeLogger()
 	defer l.Sync()
 
+	if len(os.Args) != 2 {
+		l.Error("Wrong number of arguments")
+		l.Error("Usage: opc-engine-simulator /path/to/engine/config.opcroj")
+		os.Exit(1)
+	}
+
 	input := os.Args[1]
 	content, err := os.ReadFile(input)
 	if err != nil {
