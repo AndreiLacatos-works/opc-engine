@@ -1,0 +1,144 @@
+{
+  "root": {
+    "id": "6407f66f-bb9e-45ac-b54a-18f79ed42549",
+    "label": "Application nodes",
+    "type": "container",
+    "children": [
+      {
+        "id": "3fb417bf-1139-417e-81cd-376ef3ef1eff",
+        "label": "Sample container",
+        "type": "container",
+        "children": [
+          {
+            "id": "e1cd2abd-ee13-4e5e-bd6d-50d09a201120",
+            "label": "Floats",
+            "type": "value",
+            "children": null,
+            "waveform": {
+              "duration": 10000,
+              "tickFrequency": 50,
+              "type": "doubleValues",
+              "transitionPoints": [
+                {
+                  "tick": 2000,
+                  "value": 200.0
+                },
+                {
+                  "tick": 3000,
+                  "value": 300.0
+                },
+                {
+                  "tick": 4000,
+                  "value": 400.0
+                },
+                {
+                  "tick": 5000,
+                  "value": 500.0
+                },
+                {
+                  "tick": 6000,
+                  "value": 600.0
+                },
+                {
+                  "tick": 9000,
+                  "value": 900.0
+                }
+              ]
+            }
+          }
+        ],
+        "waveform": null
+      },
+      {
+        "id": "27d05df1-e275-4aeb-bd1b-532151a7b3c7",
+        "label": "Boolean",
+        "type": "value",
+        "children": null,
+        "waveform": {
+          "duration": 10000,
+          "tickFrequency": 100,
+          "type": "transitions",
+          "transitionPoints": [
+            {
+              "tick": 500,
+              "value": 0.0
+            },
+            {
+              "tick": 1000,
+              "value": 0.0
+            },
+            {
+              "tick": 1500,
+              "value": 0.0
+            },
+            {
+              "tick": 2000,
+              "value": 0.0
+            },
+            {
+              "tick": 2500,
+              "value": 0.0
+            },
+            {
+              "tick": 3000,
+              "value": 0.0
+            },
+            {
+              "tick": 3500,
+              "value": 0.0
+            },
+            {
+              "tick": 4000,
+              "value": 0.0
+            },
+            {
+              "tick": 4500,
+              "value": 0.0
+            },
+            {
+              "tick": 5000,
+              "value": 0.0
+            },
+            {
+              "tick": 5500,
+              "value": 0.0
+            },
+            {
+              "tick": 6000,
+              "value": 0.0
+            },
+            {
+              "tick": 6500,
+              "value": 0.0
+            },
+            {
+              "tick": 7000,
+              "value": 0.0
+            },
+            {
+              "tick": 7500,
+              "value": 0.0
+            },
+            {
+              "tick": 8000,
+              "value": 0.0
+            },
+            {
+              "tick": 8500,
+              "value": 0.0
+            },
+            {
+              "tick": 9000,
+              "value": 0.0
+            },
+            {
+              "tick": 9500,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    ],
+    "waveform": null
+  }
+}

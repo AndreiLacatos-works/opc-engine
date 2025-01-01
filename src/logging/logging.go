@@ -41,7 +41,7 @@ func MakeLogger(l zapcore.Level) *zap.Logger {
 }
 
 func customLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString(fmt.Sprintf("[%-5s]", level.CapitalString()))
+	enc.AppendString(fmt.Sprintf("[%s]", level.CapitalString()))
 }
 
 func customNameEncoder(name string, enc zapcore.PrimitiveArrayEncoder) {
