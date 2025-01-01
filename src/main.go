@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/AndreiLacatos/opc-engine/config"
 	"github.com/AndreiLacatos/opc-engine/logging"
 	nodeengine "github.com/AndreiLacatos/opc-engine/node-engine"
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
@@ -20,19 +21,22 @@ import (
 var l *zap.Logger
 
 func main() {
-	l = logging.MakeLogger()
+	c := config.GetConfig()
+	l = logging.MakeLogger(c.LogLevel)
 	defer l.Sync()
 
-	if len(os.Args) != 2 {
-		l.Error("Wrong number of arguments")
-		l.Error("Usage: opc-engine-simulator /path/to/engine/config.opcroj")
+	if c.ProjectPath == "" {
+		l.Error("Missing project path")
+		l.Error("Usage:")
+		l.Error("\topc-engine-simulator /path/to/engine/config.opcroj")
+		l.Error("\t\tOR")
+		l.Error("\tset OPC_ENGINE_SIMULATOR_PROJECT_PATH environment variable")
 		os.Exit(1)
 	}
 
-	input := os.Args[1]
-	content, err := os.ReadFile(input)
+	content, err := os.ReadFile(c.ProjectPath)
 	if err != nil {
-		l.Fatal(fmt.Sprintf("error reading file: %v", err))
+		l.Fatal(fmt.Sprintf("error reading project file: %v", err))
 	}
 	jsonString := string(content)
 
@@ -42,7 +46,7 @@ func main() {
 	if err != nil {
 		l.Fatal(fmt.Sprintf("error decoding JSON: %v", err))
 	}
-	structure := structureModel.ToDomain()
+	structure := structureModel.ToDomain(l)
 
 	e := nodeengine.CreateNew(extractValueNodes(structure.Root), l)
 
@@ -51,8 +55,8 @@ func main() {
 		ServerEndpointUrl: getIpAddress(),
 		Port:              39056,
 		BuildInfo: opcserver.OpcServerBuildInfo{
-			Version:   "0.0.1",
-			BuildDate: time.Now().UTC(),
+			Version:   c.Version,
+			BuildDate: c.BuildTime,
 		},
 	}, l)
 

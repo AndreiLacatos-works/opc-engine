@@ -3,10 +3,10 @@ package serialization
 import (
 	"fmt"
 
-	"github.com/AndreiLacatos/opc-engine/logging"
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type OpcStructureModel struct {
@@ -21,16 +21,15 @@ type OpcStructureNodeModel struct {
 	Waveform *WaveformModel           `json:"waveform,omitempty"`
 }
 
-func (m *OpcStructureModel) ToDomain() opc.OpcStructure {
+func (m *OpcStructureModel) ToDomain(l *zap.Logger) opc.OpcStructure {
 	return opc.OpcStructure{
-		Root: *m.Root.ToDomain().(*opcnode.OpcContainerNode),
+		Root: *m.Root.ToDomain(l.Named("mapper")).(*opcnode.OpcContainerNode),
 	}
 }
 
-func (n *OpcStructureNodeModel) ToDomain() opcnode.OpcStructureNode {
+func (n *OpcStructureNodeModel) ToDomain(l *zap.Logger) opcnode.OpcStructureNode {
 	id, err := uuid.Parse(n.Id)
 	if err != nil {
-		l := logging.MakeLogger().Named("mapper")
 		l.Warn(fmt.Sprintf("%s is not a valid UUID, skipping node", n.Id))
 		return nil
 	}
@@ -38,7 +37,7 @@ func (n *OpcStructureNodeModel) ToDomain() opcnode.OpcStructureNode {
 	case "container":
 		mappedChildren := make([]opcnode.OpcStructureNode, 0)
 		for _, v := range *n.Children {
-			if mapped := v.ToDomain(); mapped != nil {
+			if mapped := v.ToDomain(l); mapped != nil {
 				mappedChildren = append(mappedChildren, mapped)
 			}
 		}
@@ -51,10 +50,9 @@ func (n *OpcStructureNodeModel) ToDomain() opcnode.OpcStructureNode {
 		return &opcnode.OpcValueNode{
 			Id:       id,
 			Label:    n.Label,
-			Waveform: n.Waveform.ToDomain(),
+			Waveform: n.Waveform.ToDomain(l),
 		}
 	default:
-		l := logging.MakeLogger().Named("mapper")
 		l.Warn(fmt.Sprintf("unrecognized node type %s, skipping node", n.NodeType))
 		return nil
 	}

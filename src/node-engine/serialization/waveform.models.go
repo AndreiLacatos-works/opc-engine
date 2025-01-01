@@ -3,9 +3,9 @@ package serialization
 import (
 	"fmt"
 
-	"github.com/AndreiLacatos/opc-engine/logging"
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/waveform"
 	waveformvalue "github.com/AndreiLacatos/opc-engine/node-engine/models/waveform/waveform_value"
+	"go.uber.org/zap"
 )
 
 type WaveformModel struct {
@@ -20,8 +20,8 @@ type WaveformValueModel struct {
 	Value float64 `json:"value"`
 }
 
-func (w *WaveformModel) ToDomain() waveform.Waveform {
-	waveformType := mapWaveformType(w.WaveformType)
+func (w *WaveformModel) ToDomain(l *zap.Logger) waveform.Waveform {
+	waveformType := mapWaveformType(w.WaveformType, l.Named("mapper"))
 	return waveform.Waveform{
 		Duration:         w.Duration,
 		TickFrequency:    w.TickFrequency,
@@ -30,15 +30,14 @@ func (w *WaveformModel) ToDomain() waveform.Waveform {
 	}
 }
 
-func mapWaveformType(t string) waveform.WaveformType {
+func mapWaveformType(t string, l *zap.Logger) waveform.WaveformType {
 	switch t {
 	case "doubleValues":
 		return waveform.NumericValues
 	case "transitions":
 		return waveform.Transitions
 	default:
-		l := logging.MakeLogger().Named("mapper")
-		l.Warn(fmt.Sprintf("unrecognized waveform type %s", t))
+		l.Warn(fmt.Sprintf("unrecognized waveform type %s, defaulting to transitions", t))
 		return waveform.Transitions
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func MakeLogger() *zap.Logger {
+func MakeLogger(l zapcore.Level) *zap.Logger {
 	rotatingLogger := &lumberjack.Logger{
 		Filename:   "logs/app.log",
 		MaxSize:    10,
@@ -20,7 +20,6 @@ func MakeLogger() *zap.Logger {
 		Compress:   false,
 	}
 
-	level := zapcore.DebugLevel
 	consoleSyncer := zapcore.AddSync(os.Stdout)
 	fileSyncer := zapcore.AddSync(rotatingLogger)
 	stderrSyncer := zapcore.AddSync(os.Stderr)
@@ -32,8 +31,8 @@ func MakeLogger() *zap.Logger {
 	encoderConfig.EncodeName = customNameEncoder
 	encoder := zapcore.NewConsoleEncoder(encoderConfig)
 
-	consoleCore := zapcore.NewCore(encoder, consoleSyncer, level)
-	fileCore := zapcore.NewCore(encoder, fileSyncer, level)
+	consoleCore := zapcore.NewCore(encoder, consoleSyncer, l)
+	fileCore := zapcore.NewCore(encoder, fileSyncer, l)
 	stderrCore := zapcore.NewCore(encoder, stderrSyncer, zapcore.ErrorLevel)
 
 	core := zapcore.NewTee(consoleCore, fileCore, stderrCore)

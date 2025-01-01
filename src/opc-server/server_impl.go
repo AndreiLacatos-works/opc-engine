@@ -95,7 +95,7 @@ func (s *opcServerImpl) Start() error {
 		return fmt.Errorf("server never set up")
 	}
 
-	s.Logger.Info(fmt.Sprintf("starter listening as %s on %s",
+	s.Logger.Info(fmt.Sprintf("started listening as %s on %s",
 		s.Config.ServerName, s.OpcServer.EndpointURL()))
 	if err := s.OpcServer.ListenAndServe(); err != nil {
 		return errors.Wrap(err, "error starting server")
