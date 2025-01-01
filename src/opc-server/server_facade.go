@@ -3,6 +3,7 @@ package opcserver
 import (
 	"time"
 
+	nodeengine "github.com/AndreiLacatos/opc-engine/node-engine"
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
 )
 
@@ -11,6 +12,7 @@ type OpcServer interface {
 	SetNodeStructure(opc.OpcStructure) error
 	SetNodeValues() error
 	Start() error
+	Subscribe(chan nodeengine.NodeValueChange)
 	Stop() error
 }
 

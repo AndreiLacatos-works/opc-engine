@@ -33,8 +33,13 @@ func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode
 				log.Printf("engine loop done for %s\n", n.Label)
 				return
 			case <-time.After(time.Duration(delta) * time.Millisecond):
+				defer func() {
+					if r := recover(); r != nil {
+						log.Println("attempted to push value change but event channel was closed")
+					}
+				}()
 				e.Events <- NodeValueChange{
-					Id:       n.Id,
+					Node:     n,
 					NewValue: transition.Value,
 				}
 			}

@@ -33,7 +33,6 @@ func main() {
 	structure := structureModel.ToDomain()
 
 	e := nodeengine.CreateNew(extractValueNodes(structure.Root))
-	e.Start()
 
 	s, err := opcserver.CreateNew(opcserver.OpcServerConfig{
 		ServerName:        "test-server",
@@ -63,20 +62,8 @@ func main() {
 		stop <- ""
 	}()
 
-	// dummy consumer
-	go func() {
-		c := e.EventChannel()
-
-		for {
-			p, ok := <-c
-			if ok {
-				log.Printf("value %f from %s\n", p.NewValue.GetValue(), p.Id)
-			} else {
-				log.Println("channel closed")
-				return
-			}
-		}
-	}()
+	go s.Subscribe(e.EventChannel())
+	e.Start()
 
 	go func() {
 		waitTerminationSignal()

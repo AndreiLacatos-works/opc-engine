@@ -15,10 +15,13 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"reflect"
 	"time"
 
+	nodeengine "github.com/AndreiLacatos/opc-engine/node-engine"
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
+	waveformvalue "github.com/AndreiLacatos/opc-engine/node-engine/models/waveform/waveform_value"
 	"github.com/awcullen/opcua/server"
 	"github.com/awcullen/opcua/ua"
 	"github.com/pkg/errors"
@@ -99,6 +102,18 @@ func (s *opcServerImpl) Start() error {
 	return nil
 }
 
+func (s *opcServerImpl) Subscribe(c chan nodeengine.NodeValueChange) {
+	for {
+		p, ok := <-c
+		if ok {
+			s.updateNodeValue(p)
+		} else {
+			log.Println("event channel closed")
+			return
+		}
+	}
+}
+
 func (s *opcServerImpl) Stop() error {
 	if s.OpcServer == nil {
 		return fmt.Errorf("server never set up")
@@ -134,6 +149,26 @@ func addNodesRecursively(r opcnode.OpcStructureNode, p ua.NodeID, m *server.Name
 		}
 	}
 	return nil
+}
+
+func (s *opcServerImpl) updateNodeValue(c nodeengine.NodeValueChange) {
+	log.Printf("change: %f on %s (%s)\n", c.NewValue.GetValue(), c.Node.Label, c.Node.Id)
+	m := s.OpcServer.NamespaceManager()
+	if node, ok := m.FindVariable(ua.NewNodeIDGUID(2, c.Node.Id)); !ok {
+		log.Printf("node %s (%s) not found\n", c.Node.Label, c.Node.Id)
+	} else {
+		var v ua.Variant
+		switch n := c.NewValue.(type) {
+		case *waveformvalue.Transition:
+			v = !node.Value().Value.(bool)
+		case *waveformvalue.DoubleValue:
+			v = n.GetValue()
+		default:
+			log.Printf("value type %T not recognized, skipping\n", reflect.TypeOf(c.NewValue))
+			return
+		}
+		node.SetValue(ua.NewDataValue(v, ua.Good, time.Now(), 0, time.Now(), 0))
+	}
 }
 
 func createServerCertificate(c OpcServerConfig) error {
