@@ -33,7 +33,7 @@ func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode
 			delta := transition.Tick - previousTick
 			select {
 			case <-ctx.Done():
-				e.Logger.Debug(fmt.Sprintf("engine loop done for %s", n.Label))
+				e.Logger.Info(fmt.Sprintf("engine loop done for %s", n.Label))
 				return
 			case <-time.After(time.Duration(delta) * time.Millisecond):
 				defer func() {
