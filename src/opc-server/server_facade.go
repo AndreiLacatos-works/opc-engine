@@ -25,7 +25,7 @@ type OpcServerBuildInfo struct {
 type OpcServerConfig struct {
 	ServerName        string
 	ServerEndpointUrl string
-	Port              int32
+	Port              uint16
 	BuildInfo         OpcServerBuildInfo
 }
 

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -53,8 +52,8 @@ func main() {
 
 	s, err := opcserver.CreateNew(opcserver.OpcServerConfig{
 		ServerName:        "test-server",
-		ServerEndpointUrl: getIpAddress(),
-		Port:              39056,
+		ServerEndpointUrl: c.ServerAddress,
+		Port:              c.ServerPort,
 		BuildInfo: opcserver.OpcServerBuildInfo{
 			Version:   c.Version,
 			BuildDate: c.BuildTime,
@@ -94,53 +93,6 @@ func main() {
 	}()
 	<-stop
 	l.Info("program terminated")
-}
-
-func getIpAddress() string {
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		l.Fatal(fmt.Sprintf("error retrieving network interfaces: %v", err))
-	}
-
-	candidates := make([]string, 0)
-	for _, iface := range interfaces {
-		// skip down or loopback interfaces
-		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
-			continue
-		}
-
-		// get addresses associated with the interface
-		addrs, err := iface.Addrs()
-		if err != nil {
-			fmt.Printf("error getting addresses for interface %s: %v\n", iface.Name, err)
-			continue
-		}
-
-		// print each address
-		for _, addr := range addrs {
-			var ip net.IP
-
-			// extract the IP address from the address
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-
-			// skip IPv6 or link-local addresses
-			if ip == nil || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
-				continue
-			}
-
-			// only consider IPv4
-			if ip.To4() != nil {
-				candidates = append(candidates, ip.String())
-			}
-		}
-	}
-
-	return candidates[0]
 }
 
 func waitTerminationSignal() {
