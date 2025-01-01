@@ -13,3 +13,17 @@ Works best with [OPC Node designer](https://github.com/AndreiLacatos-works/opc-n
 An example project is included that simulates a node with boolean values that toggle every 500ms, and another node with numeric (float) values that change based on a custom-defined rule.
 
 ## Installation
+
+Install the latest docker image from the releases page, then load it:
+
+```sh
+docker load -i opc-engine-simulator-v0.1.0.tar
+```
+
+Launch the container via
+
+```sh
+docker-compose up
+```
+
+Note: when updating, make sure to remove the old container before launching the new version

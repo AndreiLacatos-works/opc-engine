@@ -73,3 +73,7 @@ docker save -o dist/opc-engine-simulator-v$CURRENT_VERSION.tar opc-engine-simula
 
 # update docker-compose
 sed -i "s/image: opc-engine-simulator:.*$/image: opc-engine-simulator:${CURRENT_VERSION}/g" docker-compose.yaml
+
+# update README
+sed -i "s/docker load -i opc-engine-simulator-v.*$/docker load -i opc-engine-simulator-v${CURRENT_VERSION}.tar/g" README.md
+
