@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -15,18 +14,19 @@ import (
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
 	"github.com/AndreiLacatos/opc-engine/node-engine/serialization"
 	opcserver "github.com/AndreiLacatos/opc-engine/opc-server"
+	"go.uber.org/zap"
 )
 
+var l *zap.Logger
+
 func main() {
-	l := logging.MakeLogger()
-	l.Debug("hello")
+	l = logging.MakeLogger()
 	defer l.Sync()
-	return
 
 	input := os.Args[1]
 	content, err := os.ReadFile(input)
 	if err != nil {
-		log.Fatalf("error reading file: %v", err)
+		l.Fatal(fmt.Sprintf("error reading file: %v", err))
 	}
 	jsonString := string(content)
 
@@ -34,11 +34,11 @@ func main() {
 
 	err = json.Unmarshal([]byte(jsonString), &structureModel)
 	if err != nil {
-		log.Fatalf("error decoding JSON: %v", err)
+		l.Fatal(fmt.Sprintf("error decoding JSON: %v", err))
 	}
 	structure := structureModel.ToDomain()
 
-	e := nodeengine.CreateNew(extractValueNodes(structure.Root))
+	e := nodeengine.CreateNew(extractValueNodes(structure.Root), l)
 
 	s, err := opcserver.CreateNew(opcserver.OpcServerConfig{
 		ServerName:        "test-server",
@@ -48,23 +48,23 @@ func main() {
 			Version:   "0.0.1",
 			BuildDate: time.Now().UTC(),
 		},
-	})
+	}, l)
 
 	if err != nil {
-		log.Fatalf("could not create OPC server: %v\n", err)
+		l.Fatal(fmt.Sprintf("could not create OPC server: %v", err))
 	}
 	if err = s.Setup(); err != nil {
-		log.Fatalf("could not set up OPC server: %v\n", err)
+		l.Fatal(fmt.Sprintf("could not set up OPC server: %v", err))
 	}
 	if err = s.SetNodeStructure(structure); err != nil {
-		log.Printf("some nodes might not have been added correctly: %v\n", err)
+		l.Fatal(fmt.Sprintf("some nodes might not have been added correctly: %v", err))
 	}
 
 	stop := make(chan interface{})
 	go func() {
-		log.Println("starting opc server")
+		l.Info("starting opc server")
 		s.Start()
-		log.Println("opc server stopped")
+		l.Info("opc server stopped")
 		stop <- ""
 	}()
 
@@ -78,17 +78,17 @@ func main() {
 		time.Sleep(1 * time.Second)
 
 		if err = s.Stop(); err != nil {
-			log.Fatalf("could not stop OPC server: %v", err)
+			l.Fatal(fmt.Sprintf("could not stop OPC server: %v", err))
 		}
 	}()
 	<-stop
-	log.Printf("program terminated")
+	l.Info("program terminated")
 }
 
 func getIpAddress() string {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		log.Fatalf("error retrieving network interfaces: %v\n", err)
+		l.Fatal(fmt.Sprintf("error retrieving network interfaces: %v", err))
 	}
 
 	candidates := make([]string, 0)

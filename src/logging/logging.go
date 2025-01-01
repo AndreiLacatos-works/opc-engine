@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
@@ -26,7 +27,7 @@ func MakeLogger() *zap.Logger {
 
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.ConsoleSeparator = " "
-	encoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("[2006-01-02 15:04:05.999]")
+	encoderConfig.EncodeTime = customTimeEncoder
 	encoderConfig.EncodeLevel = customLevelEncoder
 	encoderConfig.EncodeName = customNameEncoder
 	encoder := zapcore.NewConsoleEncoder(encoderConfig)
@@ -37,7 +38,7 @@ func MakeLogger() *zap.Logger {
 
 	core := zapcore.NewTee(consoleCore, fileCore, stderrCore)
 
-	return zap.New(core).Named("default")
+	return zap.New(core).Named("OPCSIM")
 }
 
 func customLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
@@ -46,4 +47,10 @@ func customLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) 
 
 func customNameEncoder(name string, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(fmt.Sprintf("[%s]", strings.ToUpper(name)))
+}
+
+func customTimeEncoder(time time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	template := "2006-01-02 15:04:05.999"
+	formatted := time.Format(template)
+	enc.AppendString(fmt.Sprintf("[%s]", formatted+strings.Repeat("0", len(template)-len(formatted))))
 }

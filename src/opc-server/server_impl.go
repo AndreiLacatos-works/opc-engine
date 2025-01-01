@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"math/big"
 	"net"
 	"net/url"
@@ -25,11 +24,13 @@ import (
 	"github.com/awcullen/opcua/server"
 	"github.com/awcullen/opcua/ua"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 type opcServerImpl struct {
 	Config    OpcServerConfig
 	OpcServer *server.Server
+	Logger    *zap.Logger
 }
 
 func (s *opcServerImpl) Setup() error {
@@ -37,16 +38,16 @@ func (s *opcServerImpl) Setup() error {
 		return fmt.Errorf("server already set up")
 	}
 
-	log.Println("setting up OPC server")
+	s.Logger.Info("setting up OPC server")
 	configJson, err := json.MarshalIndent(s.Config, "", "  ")
 	if err != nil {
-		log.Printf("failed to convert config to JSON: %v\n", err)
+		s.Logger.Error(fmt.Sprintf("failed to convert config to JSON: %v", err))
 		return err
 	}
-	log.Printf("config: %s\n", string(configJson))
+	s.Logger.Debug(fmt.Sprintf("config: %s", string(configJson)))
 
 	if err = createServerCertificate(s.Config); err != nil {
-		log.Printf("failed to create server certificate: %v\n", err)
+		s.Logger.Error(fmt.Sprintf("failed to create server certificate: %v", err))
 		return err
 	}
 
@@ -94,7 +95,8 @@ func (s *opcServerImpl) Start() error {
 		return fmt.Errorf("server never set up")
 	}
 
-	log.Printf("starter listening as %s on %s\n", s.Config.ServerName, s.OpcServer.EndpointURL())
+	s.Logger.Info(fmt.Sprintf("starter listening as %s on %s",
+		s.Config.ServerName, s.OpcServer.EndpointURL()))
 	if err := s.OpcServer.ListenAndServe(); err != nil {
 		return errors.Wrap(err, "error starting server")
 	}
@@ -108,7 +110,7 @@ func (s *opcServerImpl) Subscribe(c chan nodeengine.NodeValueChange) {
 		if ok {
 			s.updateNodeValue(p)
 		} else {
-			log.Println("event channel closed")
+			s.Logger.Warn("event channel closed")
 			return
 		}
 	}
@@ -118,7 +120,7 @@ func (s *opcServerImpl) Stop() error {
 	if s.OpcServer == nil {
 		return fmt.Errorf("server never set up")
 	}
-	log.Println("stopping opc server")
+	s.Logger.Info("stopping opc server")
 	return s.OpcServer.Close()
 }
 
@@ -152,10 +154,11 @@ func addNodesRecursively(r opcnode.OpcStructureNode, p ua.NodeID, m *server.Name
 }
 
 func (s *opcServerImpl) updateNodeValue(c nodeengine.NodeValueChange) {
-	log.Printf("change: %f on %s (%s)\n", c.NewValue.GetValue(), c.Node.Label, c.Node.Id)
+	s.Logger.Debug(fmt.Sprintf("received change: %f on %s",
+		c.NewValue.GetValue(), opcnode.ToDebugString(&c.Node)))
 	m := s.OpcServer.NamespaceManager()
 	if node, ok := m.FindVariable(ua.NewNodeIDGUID(2, c.Node.Id)); !ok {
-		log.Printf("node %s (%s) not found\n", c.Node.Label, c.Node.Id)
+		s.Logger.Warn(fmt.Sprintf("node %s not found", opcnode.ToDebugString(&c.Node)))
 	} else {
 		var v ua.Variant
 		switch n := c.NewValue.(type) {
@@ -164,7 +167,8 @@ func (s *opcServerImpl) updateNodeValue(c nodeengine.NodeValueChange) {
 		case *waveformvalue.DoubleValue:
 			v = n.GetValue()
 		default:
-			log.Printf("value type %T not recognized, skipping\n", reflect.TypeOf(c.NewValue))
+			s.Logger.Warn(fmt.Sprintf("value type %T not recognized, skipping",
+				reflect.TypeOf(c.NewValue)))
 			return
 		}
 		node.SetValue(ua.NewDataValue(v, ua.Good, time.Now(), 0, time.Now(), 0))

@@ -5,6 +5,7 @@ import (
 
 	nodeengine "github.com/AndreiLacatos/opc-engine/node-engine"
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
+	"go.uber.org/zap"
 )
 
 type OpcServer interface {
@@ -28,7 +29,7 @@ type OpcServerConfig struct {
 	BuildInfo         OpcServerBuildInfo
 }
 
-func CreateNew(c OpcServerConfig) (OpcServer, error) {
-	s := &opcServerImpl{Config: c}
+func CreateNew(c OpcServerConfig, l *zap.Logger) (OpcServer, error) {
+	s := &opcServerImpl{Config: c, Logger: l.Named("OPCSRV")}
 	return s, nil
 }

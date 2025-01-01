@@ -1,8 +1,9 @@
 package serialization
 
 import (
-	"log"
+	"fmt"
 
+	"github.com/AndreiLacatos/opc-engine/logging"
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
 	"github.com/google/uuid"
@@ -29,7 +30,8 @@ func (m *OpcStructureModel) ToDomain() opc.OpcStructure {
 func (n *OpcStructureNodeModel) ToDomain() opcnode.OpcStructureNode {
 	id, err := uuid.Parse(n.Id)
 	if err != nil {
-		log.Printf("%s is not a valid UUID, skipping node\n", n.Id)
+		l := logging.MakeLogger().Named("mapper")
+		l.Warn(fmt.Sprintf("%s is not a valid UUID, skipping node", n.Id))
 		return nil
 	}
 	switch n.NodeType {
@@ -52,7 +54,8 @@ func (n *OpcStructureNodeModel) ToDomain() opcnode.OpcStructureNode {
 			Waveform: n.Waveform.ToDomain(),
 		}
 	default:
-		log.Printf("unrecognized node type %s, skipping node\n", n.NodeType)
+		l := logging.MakeLogger().Named("mapper")
+		l.Warn(fmt.Sprintf("unrecognized node type %s, skipping node", n.NodeType))
 		return nil
 	}
 }

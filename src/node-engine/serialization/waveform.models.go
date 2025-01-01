@@ -1,8 +1,9 @@
 package serialization
 
 import (
-	"log"
+	"fmt"
 
+	"github.com/AndreiLacatos/opc-engine/logging"
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/waveform"
 	waveformvalue "github.com/AndreiLacatos/opc-engine/node-engine/models/waveform/waveform_value"
 )
@@ -36,7 +37,8 @@ func mapWaveformType(t string) waveform.WaveformType {
 	case "transitions":
 		return waveform.Transitions
 	default:
-		log.Printf("unrecognized waveform type %s\n", t)
+		l := logging.MakeLogger().Named("mapper")
+		l.Warn(fmt.Sprintf("unrecognized waveform type %s", t))
 		return waveform.Transitions
 	}
 }
