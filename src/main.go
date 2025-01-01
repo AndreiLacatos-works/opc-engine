@@ -24,6 +24,7 @@ func main() {
 	c := config.GetConfig()
 	l = logging.MakeLogger(c.LogLevel)
 	defer l.Sync()
+	l.Info(fmt.Sprintf("OPC Engine Simulator %s (built on %v)", c.Version, c.BuildTime))
 
 	if c.ProjectPath == "" {
 		l.Error("Missing project path")

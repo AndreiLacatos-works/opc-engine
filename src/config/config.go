@@ -8,6 +8,12 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// set from build flags
+var (
+	version   string
+	buildTime string
+)
+
 type Config struct {
 	LogLevel    zapcore.Level
 	Version     string
@@ -16,10 +22,11 @@ type Config struct {
 }
 
 func GetConfig() Config {
+	build, _ := time.Parse(time.DateTime, buildTime)
 	return Config{
 		LogLevel:    getLogLevel(),
-		Version:     "0.0.1",
-		BuildTime:   time.Now().UTC(),
+		Version:     version,
+		BuildTime:   build,
 		ProjectPath: getProjectPath(),
 	}
 }
