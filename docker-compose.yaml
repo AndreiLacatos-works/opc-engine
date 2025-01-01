@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  opc-engine-simulator:
+    image: opc-engine-simulator:latest
+    container_name: opc-engine-simulation
+    environment:
+      - OPC_ENGINE_SIMULATOR_LOG_LEVEL=info # debug | info | warn | error
+      - OPC_ENGINE_SIMULATOR_PROJECT_PATH=/app/data/example.opcproj
+      - OPC_ENGINE_SIMULATOR_SERVER_PORT=39056
+    ports:
+      - "39056:39056"
+    volumes:
+      - ./examples:/app/data
+    restart: unless-stopped
