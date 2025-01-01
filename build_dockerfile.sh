@@ -66,3 +66,10 @@ fi
 
 echo "Building docker image"
 docker build --no-cache -t opc-engine-simulator:"$CURRENT_VERSION" .
+
+# create an archive of the image
+mkdir -p dist
+docker save -o dist/opc-engine-simulator-v$CURRENT_VERSION.tar opc-engine-simulator:$CURRENT_VERSION
+
+# update docker-compose
+sed -i "s/image: opc-engine-simulator:.*$/image: opc-engine-simulator:${CURRENT_VERSION}/g" docker-compose.yaml

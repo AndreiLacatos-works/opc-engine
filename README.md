@@ -11,3 +11,5 @@ Works best with [OPC Node designer](https://github.com/AndreiLacatos-works/opc-n
 ## Example
 
 An example project is included that simulates a node with boolean values that toggle every 500ms, and another node with numeric (float) values that change based on a custom-defined rule.
+
+## Installation
