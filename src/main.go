@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/AndreiLacatos/opc-engine/logging"
 	nodeengine "github.com/AndreiLacatos/opc-engine/node-engine"
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
 	"github.com/AndreiLacatos/opc-engine/node-engine/serialization"
@@ -17,6 +18,11 @@ import (
 )
 
 func main() {
+	l := logging.MakeLogger()
+	l.Debug("hello")
+	defer l.Sync()
+	return
+
 	input := os.Args[1]
 	content, err := os.ReadFile(input)
 	if err != nil {
