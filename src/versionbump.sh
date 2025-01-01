@@ -6,8 +6,10 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+basedir=$(dirname "$0")
+
 # Read the current version from versionfile
-current_version=$(cat versionfile)
+current_version=$(cat $basedir/versionfile)
 
 # Split the version into major, minor, and patch components
 IFS='.' read -r major minor patch <<< "$current_version"
@@ -38,4 +40,4 @@ new_version="$major.$minor.$patch"
 echo "Version bump: $current_version -> $new_version"
 
 # Update the versionfile with the new version
-echo "$new_version" > versionfile
+echo "$new_version" > $basedir/versionfile
