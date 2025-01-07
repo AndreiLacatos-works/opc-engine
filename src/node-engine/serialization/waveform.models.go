@@ -2,6 +2,7 @@ package serialization
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/waveform"
 	waveformvalue "github.com/AndreiLacatos/opc-engine/node-engine/models/waveform/waveform_value"
@@ -13,11 +14,16 @@ type WaveformModel struct {
 	TickFrequency    int32                `json:"tickFrequency"`
 	WaveformType     string               `json:"type"`
 	TransitionPoints []WaveformValueModel `json:"transitionPoints"`
+	Meta             *WaveformMetaModel   `json:"meta"`
 }
 
 type WaveformValueModel struct {
 	Tick  int64   `json:"tick"`
 	Value float64 `json:"value"`
+}
+
+type WaveformMetaModel struct {
+	Smoothing *string `json:"smoothing"`
 }
 
 func (w *WaveformModel) ToDomain(l *zap.Logger) waveform.Waveform {
@@ -27,6 +33,7 @@ func (w *WaveformModel) ToDomain(l *zap.Logger) waveform.Waveform {
 		TickFrequency:    w.TickFrequency,
 		WaveformType:     waveformType,
 		TransitionPoints: mapWaveformValues(w.TransitionPoints, waveformType),
+		Meta:             mapWaveformMeta(w.Meta, waveformType, l),
 	}
 }
 
@@ -57,4 +64,38 @@ func mapWaveformValues(l []WaveformValueModel, t waveform.WaveformType) []wavefo
 		m[i] = mappedValue
 	}
 	return m
+}
+
+func mapWaveformMeta(m *WaveformMetaModel, t waveform.WaveformType, l *zap.Logger) *waveform.WaveformMeta {
+
+	switch t {
+	case waveform.Transitions:
+		return nil
+	case waveform.NumericValues:
+		if m == nil {
+			l.Warn(fmt.Sprintf("missing meta, using defaults for type %v", t))
+			var d waveform.WaveformMeta = waveform.NumericWaveformMeta{
+				Smoothing: waveform.Step,
+			}
+			return &d
+		}
+		if m.Smoothing == nil {
+			l.Warn("missing smoothing type, using default")
+			return nil
+		}
+		var s waveform.SmoothingStrategy
+		switch strings.ToLower(*m.Smoothing) {
+		case "step":
+			s = waveform.Step
+		case "linear":
+			s = waveform.Linear
+		case "cubic":
+			s = waveform.CubicSpline
+		}
+		var m waveform.WaveformMeta = waveform.NumericWaveformMeta{
+			Smoothing: s,
+		}
+		return &m
+	}
+	return nil
 }

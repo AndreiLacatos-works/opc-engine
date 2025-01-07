@@ -22,12 +22,13 @@ var (
 var l *zap.Logger
 
 type Config struct {
-	LogLevel      zapcore.Level
-	Version       string
-	BuildTime     time.Time
-	ProjectPath   string
-	ServerAddress string
-	ServerPort    uint16
+	LogLevel           zapcore.Level
+	Version            string
+	BuildTime          time.Time
+	ProjectPath        string
+	ServerAddress      string
+	ServerPort         uint16
+	EngineDebugEnabled bool
 }
 
 func GetConfig() Config {
@@ -36,12 +37,13 @@ func GetConfig() Config {
 	build, _ := time.Parse(time.DateTime, buildTime)
 
 	return Config{
-		LogLevel:      level,
-		Version:       version,
-		BuildTime:     build,
-		ProjectPath:   getProjectPath(),
-		ServerPort:    getPort(),
-		ServerAddress: getIpAddress(),
+		LogLevel:           level,
+		Version:            version,
+		BuildTime:          build,
+		ProjectPath:        getProjectPath(),
+		ServerPort:         getPort(),
+		ServerAddress:      getIpAddress(),
+		EngineDebugEnabled: getEngineDebugEnabled(),
 	}
 }
 
@@ -158,4 +160,10 @@ func getIpAddress() string {
 		l.Warn("no candidate interfaces found, defaulting to localhost")
 		return "localhost"
 	}
+}
+
+func getEngineDebugEnabled() bool {
+	d := getTrimmedEnvVar("OPC_ENGINE_SIMULATOR_ENGINE_DEBUG")
+	r, _ := strconv.ParseBool(d)
+	return r
 }
