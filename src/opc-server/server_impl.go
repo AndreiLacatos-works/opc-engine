@@ -14,13 +14,11 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"reflect"
 	"time"
 
 	nodeengine "github.com/AndreiLacatos/opc-engine/node-engine"
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
-	waveformvalue "github.com/AndreiLacatos/opc-engine/node-engine/models/waveform/waveform_value"
 	"github.com/awcullen/opcua/server"
 	"github.com/awcullen/opcua/ua"
 	"github.com/pkg/errors"
@@ -160,17 +158,7 @@ func (s *opcServerImpl) updateNodeValue(c nodeengine.NodeValueChange) {
 	if node, ok := m.FindVariable(ua.NewNodeIDGUID(2, c.Node.Id)); !ok {
 		s.Logger.Warn(fmt.Sprintf("node %s not found", opcnode.ToDebugString(&c.Node)))
 	} else {
-		var v ua.Variant
-		switch n := c.NewValue.(type) {
-		case *waveformvalue.Transition:
-			v = !node.Value().Value.(bool)
-		case *waveformvalue.DoubleValue:
-			v = n.GetValue()
-		default:
-			s.Logger.Warn(fmt.Sprintf("value type %T not recognized, skipping",
-				reflect.TypeOf(c.NewValue)))
-			return
-		}
+		var v ua.Variant = c.NewValue.GetValue()
 		node.SetValue(ua.NewDataValue(v, ua.Good, time.Now(), 0, time.Now(), 0))
 	}
 }

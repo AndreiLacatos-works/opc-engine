@@ -39,14 +39,14 @@ func (c *cubicSplineSmoothingStrategyCalculator) Init() {
 	y := make([]float64, len(c.waveform.TransitionPoints)+2)
 	for i, v := range c.waveform.TransitionPoints {
 		x[i+1] = float64(v.Tick)
-		y[i+1] = v.Value.GetValue()
+		y[i+1] = v.Value.GetValue().(float64)
 	}
 
 	// add two additional entries for X = 0 & X = waveform.Duration
 	x[0] = 0
-	y[0] = c.waveform.TransitionPoints[0].Value.GetValue()
+	y[0] = c.waveform.TransitionPoints[0].Value.GetValue().(float64)
 	x[len(x)-1] = float64(c.waveform.Duration)
-	y[len(y)-1] = c.waveform.TransitionPoints[l-1].Value.GetValue()
+	y[len(y)-1] = c.waveform.TransitionPoints[l-1].Value.GetValue().(float64)
 
 	ca, cb, cc, cd := computeCubicSplineCoefficients(x, y)
 	c.coefficients = coefficients{

@@ -81,7 +81,7 @@ func (c *linearSmoothingStrategyCalculator) GetValueAtTick(t int64) waveformvalu
 		return &waveformvalue.DoubleValue{Value: 0.0}
 	}
 	v := mapValueToNewRange(float64(s.from.Tick), float64(s.to.Tick), float64(t),
-		s.from.Value.GetValue(), s.to.Value.GetValue())
+		s.from.Value.GetValue().(float64), s.to.Value.GetValue().(float64))
 
 	return &waveformvalue.DoubleValue{Value: v}
 }

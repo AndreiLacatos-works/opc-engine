@@ -28,7 +28,7 @@ func MakeValueComputer(n opcnode.OpcValueNode, l *zap.Logger) *ValueComputer {
 }
 
 func makeTransitionValueComputer(n opcnode.OpcValueNode, l *zap.Logger) *ValueComputer {
-	var c ValueComputer = &stepSmoothingStrategyCalculator{
+	var c ValueComputer = &transitionStrategyCalculator{
 		logger:   l,
 		waveform: n.Waveform,
 	}
