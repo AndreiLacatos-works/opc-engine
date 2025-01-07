@@ -17,10 +17,11 @@ type ValueChangeEngine interface {
 	Stop()
 }
 
-func CreateNew(nodes []opcnode.OpcValueNode, l *zap.Logger) ValueChangeEngine {
+func CreateNew(nodes []opcnode.OpcValueNode, l *zap.Logger, debug bool) ValueChangeEngine {
 	return &valueChangeEngineImpl{
-		Nodes:  nodes,
-		Events: make(chan NodeValueChange),
-		Logger: l.Named("ENGINE"),
+		Nodes:        nodes,
+		Events:       make(chan NodeValueChange),
+		Logger:       l.Named("ENGINE"),
+		DebugEnabled: debug,
 	}
 }

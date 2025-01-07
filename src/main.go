@@ -48,7 +48,7 @@ func main() {
 	}
 	structure := structureModel.ToDomain(l)
 
-	e := nodeengine.CreateNew(extractValueNodes(structure.Root), l)
+	e := nodeengine.CreateNew(extractValueNodes(structure.Root), l, c.EngineDebugEnabled)
 
 	s, err := opcserver.CreateNew(opcserver.OpcServerConfig{
 		ServerName:        "test-server",

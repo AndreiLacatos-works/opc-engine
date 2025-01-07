@@ -18,6 +18,9 @@
               "duration": 10000,
               "tickFrequency": 50,
               "type": "doubleValues",
+              "meta": {
+                "smoothing": "cubic"
+              },
               "transitionPoints": [
                 {
                   "tick": 2000,

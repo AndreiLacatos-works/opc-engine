@@ -1,7 +1,9 @@
 package waveformvalue
 
-type Transition struct{}
+type Transition struct {
+	Value bool
+}
 
-func (*Transition) GetValue() float64 {
-	return 0.0
+func (t *Transition) GetValue() any {
+	return t.Value
 }
