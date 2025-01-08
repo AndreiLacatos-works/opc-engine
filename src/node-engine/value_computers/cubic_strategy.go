@@ -35,18 +35,22 @@ func (c *cubicSplineSmoothingStrategyCalculator) Init() {
 
 	// map the explicit transition points to two arrays holding
 	// ticks for X & value for Y coordinates
-	x := make([]float64, len(c.waveform.TransitionPoints)+2)
-	y := make([]float64, len(c.waveform.TransitionPoints)+2)
+	x := make([]float64, len(c.waveform.TransitionPoints))
+	y := make([]float64, len(c.waveform.TransitionPoints))
 	for i, v := range c.waveform.TransitionPoints {
-		x[i+1] = float64(v.Tick)
-		y[i+1] = v.Value.GetValue().(float64)
+		x[i] = float64(v.Tick)
+		y[i] = v.Value.GetValue().(float64)
 	}
 
 	// add two additional entries for X = 0 & X = waveform.Duration
-	x[0] = 0
-	y[0] = c.waveform.TransitionPoints[0].Value.GetValue().(float64)
-	x[len(x)-1] = float64(c.waveform.Duration)
-	y[len(y)-1] = c.waveform.TransitionPoints[l-1].Value.GetValue().(float64)
+	if x[0] != 0 {
+		x = append([]float64{0}, x...)
+		y = append([]float64{c.waveform.TransitionPoints[0].Value.GetValue().(float64)}, y...)
+	}
+	if x[len(x)-1] != float64(c.waveform.Duration) {
+		x = append(x, float64(c.waveform.Duration))
+		y = append(y, c.waveform.TransitionPoints[l-1].Value.GetValue().(float64))
+	}
 
 	ca, cb, cc, cd := computeCubicSplineCoefficients(x, y)
 	c.coefficients = coefficients{
