@@ -29,7 +29,7 @@ type OpcServerConfig struct {
 	BuildInfo         OpcServerBuildInfo
 }
 
-func CreateNew(c OpcServerConfig, l *zap.Logger) (OpcServer, error) {
+func CreateNew(c OpcServerConfig, l *zap.Logger) OpcServer {
 	s := &opcServerImpl{Config: c, Logger: l.Named("OPCSRV")}
-	return s, nil
+	return s
 }

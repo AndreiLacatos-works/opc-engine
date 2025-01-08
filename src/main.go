@@ -14,6 +14,7 @@ import (
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
 	"github.com/AndreiLacatos/opc-engine/node-engine/serialization"
 	opcserver "github.com/AndreiLacatos/opc-engine/opc-server"
+	tcpserver "github.com/AndreiLacatos/opc-engine/tcp-server"
 	"go.uber.org/zap"
 )
 
@@ -50,44 +51,68 @@ func main() {
 
 	e := nodeengine.CreateNew(extractValueNodes(structure.Root), l, c.EngineDebugEnabled)
 
-	s, err := opcserver.CreateNew(opcserver.OpcServerConfig{
+	opcServer := opcserver.CreateNew(opcserver.OpcServerConfig{
 		ServerName:        "test-server",
 		ServerEndpointUrl: c.ServerAddress,
-		Port:              c.ServerPort,
+		Port:              c.OpcServerPort,
 		BuildInfo: opcserver.OpcServerBuildInfo{
 			Version:   c.Version,
 			BuildDate: c.BuildTime,
 		},
 	}, l)
 
-	if err != nil {
-		l.Fatal(fmt.Sprintf("could not create OPC server: %v", err))
-	}
-	if err = s.Setup(); err != nil {
+	configServer := tcpserver.CreateNew(tcpserver.TcpServerConfig{
+		Host: c.ServerAddress,
+		Port: c.TcpServerPort,
+	}, l)
+
+	configServer.Setup()
+
+	if err = opcServer.Setup(); err != nil {
 		l.Fatal(fmt.Sprintf("could not set up OPC server: %v", err))
 	}
-	if err = s.SetNodeStructure(structure); err != nil {
+	if err = opcServer.SetNodeStructure(structure); err != nil {
 		l.Fatal(fmt.Sprintf("some nodes might not have been added correctly: %v", err))
 	}
 
 	stop := make(chan interface{})
 	go func() {
 		l.Info("starting opc server")
-		s.Start()
+		opcServer.Start()
 		l.Info("opc server stopped")
 		stop <- ""
 	}()
 
-	go s.Subscribe(e.EventChannel())
-	e.Start()
+	go func() {
+		l.Info("starting config tcp server")
+		configServer.Start()
+		l.Info("config tcp server stopped")
+	}()
+	go opcServer.Subscribe(e.EventChannel())
+	go e.Start()
+
+	go func() {
+		commands := configServer.GetCommandChannel()
+		response := configServer.GetResponseChannel()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-commands:
+				response <- nil
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
 
 	go func() {
 		waitTerminationSignal()
 
+		configServer.Stop()
 		e.Stop()
 		time.Sleep(1 * time.Second)
 
-		if err = s.Stop(); err != nil {
+		if err = opcServer.Stop(); err != nil {
 			l.Fatal(fmt.Sprintf("could not stop OPC server: %v", err))
 		}
 	}()
