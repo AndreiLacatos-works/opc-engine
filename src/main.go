@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/AndreiLacatos/opc-engine/config"
 	"github.com/AndreiLacatos/opc-engine/logging"
 	nodeengine "github.com/AndreiLacatos/opc-engine/node-engine"
-	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
+	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
 	"github.com/AndreiLacatos/opc-engine/node-engine/serialization"
 	opcserver "github.com/AndreiLacatos/opc-engine/opc-server"
 	tcpserver "github.com/AndreiLacatos/opc-engine/tcp-server"
@@ -19,6 +20,9 @@ import (
 )
 
 var l *zap.Logger
+var configServer tcpserver.TcpServer
+var opcServer opcserver.OpcServer = nil
+var nodeEngine nodeengine.ValueChangeEngine = nil
 
 func main() {
 	c := config.GetConfig()
@@ -26,97 +30,51 @@ func main() {
 	defer l.Sync()
 	l.Info(fmt.Sprintf("OPC Engine Simulator %s (built on %v)", c.Version, c.BuildTime))
 
-	if c.ProjectPath == "" {
-		l.Error("Missing project path")
-		l.Error("Usage:")
-		l.Error("\topc-engine-simulator /path/to/engine/config.opcroj")
-		l.Error("\t\tOR")
-		l.Error("\tset OPC_ENGINE_SIMULATOR_PROJECT_PATH environment variable")
-		os.Exit(1)
-	}
-
-	content, err := os.ReadFile(c.ProjectPath)
-	if err != nil {
-		l.Fatal(fmt.Sprintf("error reading project file: %v", err))
-	}
-	jsonString := string(content)
-
-	var structureModel serialization.OpcStructureModel
-
-	err = json.Unmarshal([]byte(jsonString), &structureModel)
-	if err != nil {
-		l.Fatal(fmt.Sprintf("error decoding JSON: %v", err))
-	}
-	structure := structureModel.ToDomain(l)
-
-	e := nodeengine.CreateNew(extractValueNodes(structure.Root), l, c.EngineDebugEnabled)
-
-	opcServer := opcserver.CreateNew(opcserver.OpcServerConfig{
-		ServerName:        "test-server",
-		ServerEndpointUrl: c.ServerAddress,
-		Port:              c.OpcServerPort,
-		BuildInfo: opcserver.OpcServerBuildInfo{
-			Version:   c.Version,
-			BuildDate: c.BuildTime,
-		},
-	}, l)
-
-	configServer := tcpserver.CreateNew(tcpserver.TcpServerConfig{
+	configServer = tcpserver.CreateNew(tcpserver.TcpServerConfig{
 		Host: c.ServerAddress,
 		Port: c.TcpServerPort,
 	}, l)
 
 	configServer.Setup()
-
-	if err = opcServer.Setup(); err != nil {
-		l.Fatal(fmt.Sprintf("could not set up OPC server: %v", err))
-	}
-	if err = opcServer.SetNodeStructure(structure); err != nil {
-		l.Fatal(fmt.Sprintf("some nodes might not have been added correctly: %v", err))
-	}
-
-	stop := make(chan interface{})
 	go func() {
-		l.Info("starting opc server")
-		opcServer.Start()
-		l.Info("opc server stopped")
-		stop <- ""
+		if err := configServer.Start(); err != nil {
+			l.Error(fmt.Sprintf("failed to start config server, reason: %v", err))
+			os.Exit(1)
+		}
 	}()
 
-	go func() {
-		l.Info("starting config tcp server")
-		configServer.Start()
-		l.Info("config tcp server stopped")
-	}()
-	go opcServer.Subscribe(e.EventChannel())
-	go e.Start()
+	initialStructure := getInitialOpcStructure(c)
+	if initialStructure != nil {
+		setupOpc(c, initialStructure)
+	}
 
 	go func() {
 		commands := configServer.GetCommandChannel()
 		response := configServer.GetResponseChannel()
 		for {
-			select {
-			case <-stop:
-				return
-			case <-commands:
-				response <- nil
+			s := <-commands
+			if err := teardownOpc(); err != nil {
+				l.Error(fmt.Sprintf("error tearing down OPC server, reason: %v", err))
+				response <- err
 			}
-			time.Sleep(100 * time.Millisecond)
+			if err := setupOpc(c, &s); err != nil {
+				l.Error(fmt.Sprintf("error setting up OPC server, reason: %v", err))
+				response <- err
+			}
+			response <- nil
 		}
 	}()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		waitTerminationSignal()
 
+		teardownOpc()
 		configServer.Stop()
-		e.Stop()
-		time.Sleep(1 * time.Second)
-
-		if err = opcServer.Stop(); err != nil {
-			l.Fatal(fmt.Sprintf("could not stop OPC server: %v", err))
-		}
+		wg.Done()
 	}()
-	<-stop
+	wg.Wait()
 	l.Info("program terminated")
 }
 
@@ -126,16 +84,92 @@ func waitTerminationSignal() {
 	<-sigs
 }
 
-func extractValueNodes(r opcnode.OpcContainerNode) []opcnode.OpcValueNode {
-	res := make([]opcnode.OpcValueNode, 0)
-
-	for _, n := range r.Children {
-		switch t := n.(type) {
-		case *opcnode.OpcContainerNode:
-			res = append(res, extractValueNodes(*t)...)
-		case *opcnode.OpcValueNode:
-			res = append(res, *t)
-		}
+func setupOpc(c config.Config, s *opc.OpcStructure) error {
+	if s == nil {
+		l.Warn("missing OPC structure, aborting setup")
+		return nil
 	}
-	return res
+
+	if opcServer != nil || nodeEngine != nil {
+		l.Warn("OPC server or node engine not properly disposed, abortint setup")
+		return nil
+	}
+
+	opcServer = opcserver.CreateNew(opcserver.OpcServerConfig{
+		ServerName:        "test-server",
+		ServerEndpointUrl: c.ServerAddress,
+		Port:              c.OpcServerPort,
+		BuildInfo: opcserver.OpcServerBuildInfo{
+			Version:   c.Version,
+			BuildDate: c.BuildTime,
+		},
+	}, l)
+
+	if err := opcServer.Setup(); err != nil {
+		l.Error(fmt.Sprintf("could not set up OPC server: %v", err))
+		return err
+	}
+	if err := opcServer.SetNodeStructure(*s); err != nil {
+		l.Error(fmt.Sprintf("some nodes might not have been added correctly: %v", err))
+		return err
+	}
+
+	var opcStartErr error = nil
+	go func() {
+		if err := opcServer.Start(); err != nil {
+			opcStartErr = err
+		}
+	}()
+	time.Sleep(2 * time.Second)
+	if opcStartErr != nil {
+		l.Error(fmt.Sprintf("could not start OPC server, reason: %v", opcStartErr))
+		return opcStartErr
+	} else {
+		l.Info("started OPC server")
+	}
+
+	nodeEngine = nodeengine.CreateNew(*s, l, c.EngineDebugEnabled)
+	go opcServer.Subscribe(nodeEngine.EventChannel())
+	go nodeEngine.Start()
+
+	return nil
+}
+
+func teardownOpc() error {
+	if opcServer == nil || nodeEngine == nil {
+		l.Warn("OPC server or node engine not initialized, aborting teardown")
+		return nil
+	}
+
+	nodeEngine.Stop()
+	if err := opcServer.Stop(); err != nil {
+		l.Warn(fmt.Sprintf("could not stop OPC server, reason: %v", err))
+		return err
+	}
+
+	opcServer = nil
+	nodeEngine = nil
+	return nil
+}
+
+func getInitialOpcStructure(c config.Config) *opc.OpcStructure {
+	if c.ProjectPath == "" {
+		return nil
+	}
+
+	content, err := os.ReadFile(c.ProjectPath)
+	if err != nil {
+		l.Error(fmt.Sprintf("error reading project file: %v", err))
+		return nil
+	}
+
+	jsonString := string(content)
+	var structureModel serialization.OpcStructureModel
+	err = json.Unmarshal([]byte(jsonString), &structureModel)
+	if err != nil {
+		l.Error(fmt.Sprintf("error decoding JSON: %v", err))
+		return nil
+	}
+	structure := structureModel.ToDomain(l)
+	return &structure
 }

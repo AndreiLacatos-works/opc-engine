@@ -11,7 +11,6 @@ import (
 type OpcServer interface {
 	Setup() error
 	SetNodeStructure(opc.OpcStructure) error
-	SetNodeValues() error
 	Start() error
 	Subscribe(chan nodeengine.NodeValueChange)
 	Stop() error

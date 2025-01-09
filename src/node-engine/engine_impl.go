@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
@@ -18,10 +19,13 @@ type valueChangeEngineImpl struct {
 	Events       chan NodeValueChange
 	Logger       *zap.Logger
 	DebugEnabled bool
+	Teardown     *sync.WaitGroup
 }
 
 func (e *valueChangeEngineImpl) Start() {
+	e.Logger.Info("starting node engine")
 	ctx, cancel := context.WithCancel(context.Background())
+	e.Teardown = &sync.WaitGroup{}
 	e.Cancel = cancel
 	for _, n := range e.Nodes {
 		go e.executeEngineLoop(ctx, n)
@@ -30,7 +34,7 @@ func (e *valueChangeEngineImpl) Start() {
 
 func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode.OpcValueNode) {
 	e.Logger.Info(fmt.Sprintf("starting engine loop for %s", n.Label))
-
+	e.Teardown.Add(1)
 	c := valuecomputers.MakeValueComputer(n, e.Logger)
 
 	if c == nil {
@@ -62,6 +66,7 @@ func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode
 			select {
 			case <-ctx.Done():
 				e.Logger.Info(fmt.Sprintf("engine loop done for %s", n.Label))
+				e.Teardown.Done()
 				return
 			case <-time.After(time.Duration(n.Waveform.TickFrequency) * time.Millisecond):
 			}
@@ -72,6 +77,7 @@ func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode
 		select {
 		case <-ctx.Done():
 			e.Logger.Info(fmt.Sprintf("engine loop done for %s", n.Label))
+			e.Teardown.Done()
 			return
 		case <-time.After(time.Duration(untilEnd) * time.Millisecond):
 		}
@@ -88,6 +94,7 @@ func (e *valueChangeEngineImpl) Stop() {
 		e.Cancel()
 	}
 	close(e.Events)
+	e.Teardown.Wait()
 }
 
 func (e *valueChangeEngineImpl) debugWrite(t int64, v waveformvalue.WaveformPointValue) {
