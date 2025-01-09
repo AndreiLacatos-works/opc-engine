@@ -11,7 +11,6 @@ import (
 type OpcServer interface {
 	Setup() error
 	SetNodeStructure(opc.OpcStructure) error
-	SetNodeValues() error
 	Start() error
 	Subscribe(chan nodeengine.NodeValueChange)
 	Stop() error
@@ -29,7 +28,7 @@ type OpcServerConfig struct {
 	BuildInfo         OpcServerBuildInfo
 }
 
-func CreateNew(c OpcServerConfig, l *zap.Logger) (OpcServer, error) {
+func CreateNew(c OpcServerConfig, l *zap.Logger) OpcServer {
 	s := &opcServerImpl{Config: c, Logger: l.Named("OPCSRV")}
-	return s, nil
+	return s
 }

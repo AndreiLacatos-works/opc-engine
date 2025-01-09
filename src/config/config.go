@@ -27,7 +27,8 @@ type Config struct {
 	BuildTime          time.Time
 	ProjectPath        string
 	ServerAddress      string
-	ServerPort         uint16
+	OpcServerPort      uint16
+	TcpServerPort      uint16
 	EngineDebugEnabled bool
 }
 
@@ -41,7 +42,8 @@ func GetConfig() Config {
 		Version:            version,
 		BuildTime:          build,
 		ProjectPath:        getProjectPath(),
-		ServerPort:         getPort(),
+		OpcServerPort:      getOpcPort(),
+		TcpServerPort:      getTcpPort(),
 		ServerAddress:      getIpAddress(),
 		EngineDebugEnabled: getEngineDebugEnabled(),
 	}
@@ -78,14 +80,26 @@ func getProjectPath() string {
 	return ""
 }
 
-func getPort() uint16 {
+func getOpcPort() uint16 {
 	s := getTrimmedEnvVar("OPC_ENGINE_SIMULATOR_SERVER_PORT")
 	if p, err := strconv.ParseUint(s, 10, 16); err != nil {
 		defaultPort := uint16(39056)
 		l.Warn(fmt.Sprintf("invalid port %s, defaulting to %d", s, defaultPort))
 		return defaultPort
 	} else {
-		l.Debug(fmt.Sprintf("got server port %d from environment", p))
+		l.Debug(fmt.Sprintf("got opc server port %d from environment", p))
+		return uint16(p)
+	}
+}
+
+func getTcpPort() uint16 {
+	s := getTrimmedEnvVar("OPC_ENGINE_CONFIGURATION_SERVER_PORT")
+	if p, err := strconv.ParseUint(s, 10, 16); err != nil {
+		defaultPort := uint16(39057)
+		l.Warn(fmt.Sprintf("invalid port %s, defaulting to %d", s, defaultPort))
+		return defaultPort
+	} else {
+		l.Debug(fmt.Sprintf("got configuration server port %d from environment", p))
 		return uint16(p)
 	}
 }
