@@ -10,24 +10,28 @@ import (
 	"strings"
 
 	"github.com/AndreiLacatos/opc-engine/node-engine/models/opc"
-	"github.com/AndreiLacatos/opc-engine/node-engine/serialization"
+	"github.com/AndreiLacatos/opc-engine/tcp-server/serialization"
 	"go.uber.org/zap"
 )
 
 type TcpServerImpl struct {
-	Host     string
-	Port     uint16
-	Logger   *zap.Logger
-	Listener *net.Listener
-	Done     chan bool
-	Command  chan opc.OpcStructure
-	Response chan error
+	Host       string
+	Port       uint16
+	Logger     *zap.Logger
+	Listener   *net.Listener
+	Done       chan bool
+	Command    chan opc.OpcStructure
+	Response   chan error
+	CommandMap map[string]func(any) error
 }
 
 func (s *TcpServerImpl) Setup() {
 	s.Done = make(chan bool, 1)
 	s.Command = make(chan opc.OpcStructure, 1)
 	s.Response = make(chan error, 1)
+	s.CommandMap = map[string]func(any) error{
+		"configure nodes": s.handleConfigureNodes,
+	}
 }
 
 func (s *TcpServerImpl) Start() error {
@@ -89,37 +93,40 @@ func (s *TcpServerImpl) handleConnection(c net.Conn) error {
 	}
 	s.Logger.Debug(fmt.Sprintf("from %s received %s", c.RemoteAddr(), jsonStr))
 
-	var response struct {
-		Status string  `json:"status"`
-		Reason *string `json:"reason"`
-	}
-
-	newStructure, err := s.parseMessage(jsonStr)
+	command, err := s.parseCommand(jsonStr)
 	if err != nil {
 		s.Logger.Error("error parsing client message")
-		response.Status = "failure"
 		msg := "invalid message"
-		response.Reason = &msg
-		res, _ := json.Marshal(response)
+		res, _ := json.Marshal(serialization.Respose{
+			Status: "failure",
+			Reason: &msg,
+		})
 		c.Write(res)
 		return err
 	}
 
-	s.Command <- *newStructure
-	if err = <-s.Response; err != nil {
-		s.Logger.Error(fmt.Sprintf("failed to apply new OPC node structure, reason: %v", err))
-		response.Status = "failure"
-		msg := err.Error()
-		response.Reason = &msg
-		res, _ := json.Marshal(response)
-		c.Write(res)
-		return err
-	} else {
-		response.Status = "success"
-		response.Reason = nil
-		res, _ := json.Marshal(response)
+	if handler, found := s.CommandMap[strings.ToLower(command.Command)]; !found {
+		s.Logger.Warn(fmt.Sprintf("unrecognized client command %s", command.Command))
+		msg := "unrecognized client"
+		res, _ := json.Marshal(serialization.Respose{
+			Status: "failure",
+			Reason: &msg,
+		})
 		c.Write(res)
 		return nil
+	} else {
+		err = handler(command.Payload.ToDomain(s.Logger))
+		var res serialization.Respose
+		if err != nil {
+			msg := err.Error()
+			res.Status = "failure"
+			res.Reason = &msg
+		} else {
+			res.Status = "success"
+		}
+		resJson, _ := json.Marshal(res)
+		c.Write(resJson)
+		return err
 	}
 }
 
@@ -136,15 +143,30 @@ func (s *TcpServerImpl) readMessage(c net.Conn) (string, error) {
 	return strings.Trim(strings.ReplaceAll(buffer.String(), "\n", ""), "\n\t "), nil
 }
 
-func (s *TcpServerImpl) parseMessage(m string) (*opc.OpcStructure, error) {
-	var data struct {
-		Payload serialization.OpcStructureModel `json:"payload"`
-	}
-	err := json.Unmarshal([]byte(m), &data)
+func (s *TcpServerImpl) parseCommand(m string) (*serialization.Command, error) {
+	var command serialization.Command
+	err := json.Unmarshal([]byte(m), &command)
 	if err != nil {
 		s.Logger.Error(fmt.Sprintf("error unmarshaling JSON: %v", err))
 		return nil, err
 	}
-	opc := data.Payload.ToDomain(s.Logger)
-	return &opc, nil
+	return &command, nil
+}
+
+func (s *TcpServerImpl) handleConfigureNodes(p any) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.Logger.Error("input is not OPC structure")
+			err = fmt.Errorf("invalid input")
+		}
+	}()
+	structure := p.(opc.OpcStructure)
+
+	s.Command <- structure
+	if err = <-s.Response; err != nil {
+		s.Logger.Error(fmt.Sprintf("failed to apply new OPC node structure, reason: %v", err))
+		return err
+	} else {
+		return nil
+	}
 }
