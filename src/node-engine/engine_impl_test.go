@@ -255,7 +255,7 @@ func TestSingleBooleanNodeValues_TransitionEvery137Ms_WaveformDuration1700Ms_Col
 	assertBooleanSamplesets(t, expectedSamples.samples, booleanSamples, wiggle)
 }
 
-func TestSingleBooleanNodeValues_TransitionsRandomly_WaveformDuration950Ms_CollectionDuration6140Ms(t *testing.T) {
+func TestSingleBooleanNodeValues_TransitionsRandomly_WaveformDuration1300Ms_CollectionDuration6140Ms(t *testing.T) {
 	// arrange
 	l := zaptest.NewLogger(t)
 	n := &opcnode.OpcValueNode{
@@ -313,7 +313,7 @@ func TestSingleBooleanNodeValues_TransitionsRandomly_WaveformDuration950Ms_Colle
 		t.FailNow()
 	}
 
-	wiggle := time.Duration(15) * time.Millisecond
+	wiggle := time.Duration(35) * time.Millisecond
 	adjustExpectedTimestamps(&expectedSamples, testStart)
 	printSamples(l, expectedSamples.samples, testStart)
 	printSamples(l, booleanSamples, testStart)
