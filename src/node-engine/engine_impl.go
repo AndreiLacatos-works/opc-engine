@@ -44,9 +44,12 @@ func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode
 
 	(*c).Init()
 	tickCount := n.Waveform.Duration / int64(n.Waveform.TickFrequency)
+	if n.Waveform.Duration%int64(n.Waveform.TickFrequency) == 0 {
+		tickCount -= 1
+	}
 
 	for {
-		for i := int64(0); i < tickCount; i++ {
+		for i := int64(0); i <= tickCount; i++ {
 			// emit value for current tick
 			t := i * int64(n.Waveform.TickFrequency)
 			v := (*c).GetValueAtTick(t)
@@ -62,24 +65,25 @@ func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode
 				NewValue: v,
 			}
 
+			var d time.Duration
+			if i == tickCount {
+				// after emitting value for the last tick, compute the time between
+				// the last tick and the end of the waveform
+				untilEnd := n.Waveform.Duration - int64(n.Waveform.TickFrequency)*tickCount
+				d = time.Duration(untilEnd) * time.Millisecond
+			} else {
+				// compute time until the next tick
+				d = time.Duration(n.Waveform.TickFrequency) * time.Millisecond
+			}
+
 			// wait for next tick
 			select {
 			case <-ctx.Done():
 				e.Logger.Info(fmt.Sprintf("engine loop done for %s", n.Label))
 				e.Teardown.Done()
 				return
-			case <-time.After(time.Duration(n.Waveform.TickFrequency) * time.Millisecond):
+			case <-time.After(d):
 			}
-		}
-
-		// compute remaining time to complete waveform
-		untilEnd := n.Waveform.Duration - int64(n.Waveform.TickFrequency)*tickCount
-		select {
-		case <-ctx.Done():
-			e.Logger.Info(fmt.Sprintf("engine loop done for %s", n.Label))
-			e.Teardown.Done()
-			return
-		case <-time.After(time.Duration(untilEnd) * time.Millisecond):
 		}
 	}
 }

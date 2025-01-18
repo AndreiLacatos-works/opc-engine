@@ -24,7 +24,7 @@ func (c *stepSmoothingStrategyCalculator) Init() {
 	// add artificial entries for the ticks that do not have explicit transitions
 	prev := c.waveform.TransitionPoints[0].Value
 	tickCount := c.waveform.Duration / int64(c.waveform.TickFrequency)
-	for i := int64(0); i < tickCount; i++ {
+	for i := int64(0); i <= tickCount; i++ {
 		t := i * int64(c.waveform.TickFrequency)
 		if v, found := c.values[t]; found {
 			prev = v
