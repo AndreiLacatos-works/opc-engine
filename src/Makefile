@@ -51,7 +51,7 @@ run: build
 .PHONY: test
 test: 
 	@echo "Running tests..."
-	go test ./...
+	go test -count=1 ./...
 
 # Create new application release without version bump
 .PHONY: build-release
