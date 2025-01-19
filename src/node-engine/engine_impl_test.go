@@ -156,7 +156,7 @@ func TestSingleBooleanNodeValues_TransitionEvery200Ms_SingleCycle(t *testing.T) 
 		t.FailNow()
 	}
 
-	wiggle := time.Duration(15) * time.Millisecond
+	wiggle := time.Duration(3) * time.Millisecond
 	adjustExpectedTimestamps(&expectedSamples, testStart)
 	printSamples(l, expectedSamples.samples, testStart)
 	printSamples(l, booleanSamples, testStart)
@@ -249,7 +249,7 @@ func TestSingleBooleanNodeValues_TransitionEvery137Ms_WaveformDuration1700Ms_Col
 		t.FailNow()
 	}
 
-	wiggle := time.Duration(20) * time.Millisecond
+	wiggle := time.Duration(3) * time.Millisecond
 	adjustExpectedTimestamps(&expectedSamples, testStart)
 	printSamples(l, expectedSamples.samples, testStart)
 	printSamples(l, booleanSamples, testStart)
@@ -314,7 +314,7 @@ func TestSingleBooleanNodeValues_TransitionsRandomly_WaveformDuration1300Ms_Coll
 		t.FailNow()
 	}
 
-	wiggle := time.Duration(35) * time.Millisecond
+	wiggle := time.Duration(3) * time.Millisecond
 	adjustExpectedTimestamps(&expectedSamples, testStart)
 	printSamples(l, expectedSamples.samples, testStart)
 	printSamples(l, booleanSamples, testStart)
@@ -405,7 +405,7 @@ func TestSingleNumericNodeValues_StepSmoothing_WaveformDuration2700Ms_Collection
 		t.FailNow()
 	}
 
-	wiggle := time.Duration(35) * time.Millisecond
+	wiggle := time.Duration(3) * time.Millisecond
 	adjustExpectedTimestamps(&expectedSamples, testStart)
 	printSamples(l, expectedSamples.samples, testStart)
 	printSamples(l, numericSamples, testStart)
@@ -496,7 +496,7 @@ func TestSingleNumericNodeValues_LinearSmoothing_WaveformDuration2700Ms_Collecti
 		t.FailNow()
 	}
 
-	wiggle := time.Duration(35) * time.Millisecond
+	wiggle := time.Duration(3) * time.Millisecond
 	adjustExpectedTimestamps(&expectedSamples, testStart)
 	printSamples(l, expectedSamples.samples, testStart)
 	printSamples(l, numericSamples, testStart)
@@ -587,7 +587,7 @@ func TestSingleNumericNodeValues_CubicSplineSmoothing_WaveformDuration2700Ms_Col
 		t.FailNow()
 	}
 
-	wiggle := time.Duration(35) * time.Millisecond
+	wiggle := time.Duration(3) * time.Millisecond
 	adjustExpectedTimestamps(&expectedSamples, testStart)
 	printSamples(l, expectedSamples.samples, testStart)
 	printSamples(l, numericSamples, testStart)
