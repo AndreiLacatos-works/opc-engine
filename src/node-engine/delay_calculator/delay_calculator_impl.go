@@ -35,11 +35,12 @@ func (c *delayCalculatorImpl) makeCycleSchedule() {
 		scheduleLength += 1
 	}
 
-	schedule := make([]time.Time, 0, scheduleLength)
-	startTime := time.Now()
+	cyclesToPreschedule := 25
+	schedule := make([]time.Time, 0, scheduleLength*int64(cyclesToPreschedule))
+	startTime := time.Now().Add(time.Duration(cyclesToPreschedule*int(scheduleLength)*-2) * time.Microsecond)
 
-	// schedule ticks for the next 10 cycles
-	for j := 0; j < 10; j++ {
+	// schedule ticks for the next N cycles
+	for j := 0; j < cyclesToPreschedule; j++ {
 		// schedule tick for an entire cycle
 		for i := int64(1); i <= tickCount; i++ {
 			tickDelay := time.Duration(i*int64(c.waveform.TickFrequency)) * time.Millisecond

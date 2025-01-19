@@ -321,6 +321,71 @@ func TestSingleBooleanNodeValues_TransitionsRandomly_WaveformDuration1300Ms_Coll
 	assertBooleanSamplesets(t, expectedSamples.samples, booleanSamples, wiggle)
 }
 
+func TestSingleBooleanNodeValues_TransitionsRandomly_CollectionDuration200Cycles(t *testing.T) {
+	// arrange
+	l := zaptest.NewLogger(t)
+	n := &opcnode.OpcValueNode{
+		Id:    uuid.MustParse("da858518-50c9-4e55-b312-6370275b412d"),
+		Label: "Boolean",
+		Waveform: waveform.Waveform{
+			Duration:      1720,
+			TickFrequency: 150,
+			WaveformType:  waveform.Transitions,
+			TransitionPoints: []waveform.WaveformValue{
+				{
+					Tick:  300,
+					Value: &waveformvalue.Transition{},
+				},
+				{
+					Tick:  600,
+					Value: &waveformvalue.Transition{},
+				},
+				{
+					Tick:  900,
+					Value: &waveformvalue.Transition{},
+				},
+				{
+					Tick:  1050,
+					Value: &waveformvalue.Transition{},
+				},
+				{
+					Tick:  1650,
+					Value: &waveformvalue.Transition{},
+				},
+			},
+		},
+	}
+	s := opc.OpcStructure{
+		Root: opcnode.OpcContainerNode{
+			Id:    uuid.New(),
+			Label: "Root",
+			Children: []opcnode.OpcStructureNode{
+				n,
+			},
+		},
+	}
+	e := nodeengine.CreateNew(s, l, false)
+	c := SampleCollector{}
+
+	// act
+	testStart := time.Now()
+	nodeSamples := c.CollectSamples(context.TODO(), e, time.Duration(int(float32(n.Waveform.Duration)*200)+40)*time.Millisecond)
+
+	// assert
+	booleanSamples := nodeSamples[n.Id].samples
+	expectedSamples, err := loadExpectedBooleanResultSet("boolean test data - long.csv")
+	if err != nil {
+		t.Errorf("could not load expected test results: %v", err)
+		t.FailNow()
+	}
+
+	wiggle := time.Duration(3) * time.Millisecond
+	adjustExpectedTimestamps(&expectedSamples, testStart)
+	printSamples(l, expectedSamples.samples, testStart)
+	printSamples(l, booleanSamples, testStart)
+	assertBooleanSamplesets(t, expectedSamples.samples, booleanSamples, wiggle)
+}
+
 func TestSingleNumericNodeValues_StepSmoothing_WaveformDuration2700Ms_CollectionDuration6185Ms(t *testing.T) {
 	// arrange
 	l := zaptest.NewLogger(t)
