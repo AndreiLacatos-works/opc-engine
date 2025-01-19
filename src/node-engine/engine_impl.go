@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	delaycalculator "github.com/AndreiLacatos/opc-engine/node-engine/delay_calculator"
 	opcnode "github.com/AndreiLacatos/opc-engine/node-engine/models/opc/opc_node"
 	waveformvalue "github.com/AndreiLacatos/opc-engine/node-engine/models/waveform/waveform_value"
 	valuecomputers "github.com/AndreiLacatos/opc-engine/node-engine/value_computers"
@@ -48,6 +49,7 @@ func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode
 		tickCount -= 1
 	}
 
+	d := delaycalculator.CreateNew(n.Waveform)
 	for {
 		for i := int64(0); i <= tickCount; i++ {
 			// emit value for current tick
@@ -65,24 +67,13 @@ func (e *valueChangeEngineImpl) executeEngineLoop(ctx context.Context, n opcnode
 				NewValue: v,
 			}
 
-			var d time.Duration
-			if i == tickCount {
-				// after emitting value for the last tick, compute the time between
-				// the last tick and the end of the waveform
-				untilEnd := n.Waveform.Duration - int64(n.Waveform.TickFrequency)*tickCount
-				d = time.Duration(untilEnd) * time.Millisecond
-			} else {
-				// compute time until the next tick
-				d = time.Duration(n.Waveform.TickFrequency) * time.Millisecond
-			}
-
 			// wait for next tick
 			select {
 			case <-ctx.Done():
 				e.Logger.Info(fmt.Sprintf("engine loop done for %s", n.Label))
 				e.Teardown.Done()
 				return
-			case <-time.After(d):
+			case <-time.After(d.GetDelayUntilNextTick()):
 			}
 		}
 	}
