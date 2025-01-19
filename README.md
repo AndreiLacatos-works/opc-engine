@@ -17,7 +17,7 @@ An example project is included that simulates a node with boolean values that to
 Install the latest docker image from the releases page, then load it:
 
 ```sh
-docker load -i opc-engine-simulator-v0.1.0.tar
+docker load -i opc-engine-simulator-v0.2.0.tar
 ```
 
 Launch the container via

@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   opc-engine-simulator:
-    image: opc-engine-simulator:0.1.0
+    image: opc-engine-simulator:0.2.0
     container_name: opc-engine-simulation
     environment:
       - OPC_ENGINE_SIMULATOR_LOG_LEVEL=info # debug | info | warn | error
