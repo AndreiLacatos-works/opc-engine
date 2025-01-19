@@ -47,6 +47,12 @@ run: build
 	@echo "Running the application..."
 	./$(OUTPUT_DIR)/$(BINARY_NAME)
 
+# Run all tests
+.PHONY: test
+test: 
+	@echo "Running tests..."
+	go test -count=1 ./... -timeout=500s
+
 # Create new application release without version bump
 .PHONY: build-release
 build-release: $(RELEASE_DIR)

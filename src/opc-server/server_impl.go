@@ -26,9 +26,10 @@ import (
 )
 
 type opcServerImpl struct {
-	Config    OpcServerConfig
-	OpcServer *server.Server
-	Logger    *zap.Logger
+	Config      OpcServerConfig
+	OpcServer   *server.Server
+	Logger      *zap.Logger
+	Unsubscribe chan interface{}
 }
 
 func (s *opcServerImpl) Setup() error {
@@ -37,6 +38,7 @@ func (s *opcServerImpl) Setup() error {
 	}
 
 	s.Logger.Info("setting up OPC server")
+	s.Unsubscribe = make(chan interface{}, 1)
 	configJson, err := json.MarshalIndent(s.Config, "", "  ")
 	if err != nil {
 		s.Logger.Error(fmt.Sprintf("failed to convert config to JSON: %v", err))
@@ -93,7 +95,7 @@ func (s *opcServerImpl) Start() error {
 		return fmt.Errorf("server never set up")
 	}
 
-	s.Logger.Info(fmt.Sprintf("started listening as %s on %s",
+	s.Logger.Info(fmt.Sprintf("starting opc server as %s on %s",
 		s.Config.ServerName, s.OpcServer.EndpointURL()))
 	if err := s.OpcServer.ListenAndServe(); err != nil {
 		return errors.Wrap(err, "error starting server")
@@ -104,11 +106,15 @@ func (s *opcServerImpl) Start() error {
 
 func (s *opcServerImpl) Subscribe(c chan nodeengine.NodeValueChange) {
 	for {
-		p, ok := <-c
-		if ok {
-			s.updateNodeValue(p)
-		} else {
-			s.Logger.Warn("event channel closed")
+		select {
+		case p, ok := <-c:
+			if ok {
+				s.updateNodeValue(p)
+			} else {
+				s.Logger.Warn("event channel closed")
+				return
+			}
+		case <-s.Unsubscribe:
 			return
 		}
 	}
@@ -119,6 +125,7 @@ func (s *opcServerImpl) Stop() error {
 		return fmt.Errorf("server never set up")
 	}
 	s.Logger.Info("stopping opc server")
+	s.Unsubscribe <- struct{}{}
 	return s.OpcServer.Close()
 }
 
@@ -129,10 +136,6 @@ func (s *opcServerImpl) SetNodeStructure(o opc.OpcStructure) error {
 	applicationObjects := ua.NewNodeIDNumeric(0, 85)
 	r := opcnode.OpcContainerNode(o.Root)
 	return addNodesRecursively(&r, applicationObjects, s.OpcServer.NamespaceManager(), s.OpcServer)
-}
-
-func (s *opcServerImpl) SetNodeValues() error {
-	return nil
 }
 
 func addNodesRecursively(r opcnode.OpcStructureNode, p ua.NodeID, m *server.NamespaceManager, s *server.Server) error {
